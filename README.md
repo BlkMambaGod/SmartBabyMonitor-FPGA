@@ -1,3 +1,5 @@
+<img src="https://github.com/user-attachments/assets/2c503777-416a-4dda-9f6a-99248354dfe1" width="1024" height="512"/>
+
 # BabyGuardian-FPGA 👶🔒
 **Real-time Infant Safety Monitoring System using FPGA**
 
