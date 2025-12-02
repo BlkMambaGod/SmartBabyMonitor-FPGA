@@ -5,8 +5,17 @@
 #include <math.h> // Math functions
 #include <Adafruit_GFX.h> // OLED
 #include <Adafruit_SSD1306.h> // OLED
+#include <WiFi.h> //WiFi station
+// libraries to implement esp-now
+#include <esp_wifi.h>
+#include <esp_now.h>
 
-#define DEBUGGING
+#define DEBUG
+// #define DEBUGGING
+
+// Receiver MAC Address
+uint8_t broadcastAddress[] = {0xa0, 0xb7, 0x65, 0x26, 0xd7, 0x58};
+
 
 // Devices' addresses
 const int MPU   = 0x68; // MAX-30102
@@ -48,9 +57,46 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 // MAX-30102 object
 MAX30105 particleSensor;
 
+// Data to send
+struct package {
+  int32_t spo2;
+  int32_t heartRate;
+  int16_t AcX;
+  int16_t AcY; 
+  int16_t AcZ; 
+};
+package data;
+
+esp_now_peer_info_t peerInfo; // esp-now
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);// Serial for debugging
+
+  // Set device as a Wi-Fi Station
+  WiFi.mode(WIFI_STA);
+
+  // Init ESP-NOW
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
+  }
+  
+  // Once ESPNow is successfully Init, we will register for Send CB to
+  // get the status of Trasnmitted packet
+  esp_now_register_send_cb(esp_now_send_cb_t(onDataSent));
+
+  // Register peer
+  memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+  peerInfo.channel = 0;
+  peerInfo.encrypt = false;
+
+  // Add peer
+  if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+    Serial.println("Failed to add peer");
+    return;
+  }
+
   Wire.begin(); // I2C set up
 
   //Display set up
@@ -72,6 +118,7 @@ void setup() {
   if(!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
 #ifdef DEBUGGING
     Serial.println("MAX-30102 not found. Check wiring!");
+    WiFi.STA.begin();
 #endif //DEBUGGING
     display.setCursor(0, 16);
     display.print("NO DEVICE DETECTED");
@@ -102,13 +149,40 @@ void loop() {
   //   if (millis() - start < DELAY)
   //     mpu_reader(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);
   
-#ifdef DEBUGGING
+#ifdef DEBUG
   max_reader();
   // mpu_reader(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);
   delay(1000);
   // display.startscrollright(0, 7);
   displayText();
-#endif // DEBUGGING
+  sending_package();
+#endif // DEBUG
+}
+
+// Callback when data is sent
+void onDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {
+  Serial.print("\r\nLast Packet Send Status:\t");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+}
+
+// Sending info package
+void sending_package() {
+  // Setting values to send
+  data.spo2 = spo2;
+  data.heartRate = heartRate;
+  data.AcX = AcX + AcXcal;
+  data.AcY = AcY + AcYcal;
+  data.AcZ = AcZ + AcZcal;
+
+  // Send message via esp-now
+  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t*) &data, sizeof(data));
+
+#ifdef DEBUG
+  if (result == ESP_OK)
+    Serial.println("Sent with success");
+  else
+    Serial.println("Error sending the data");
+#endif //DEBUG
 }
 
 // Function to read from MPU-6050
@@ -190,10 +264,6 @@ void max_reader() {
 #endif //DEBUGGING
 }
 
-// Calculation real values
-void max_values() {
-
-}
 
 void displayText() { // display of the vitals values
   displayReset();
@@ -230,3 +300,17 @@ void displayReset() {
   display.setCursor(30, 0);
   display.println("Vitals");
 }
+
+#ifdef DEBUGGING
+void readMacAddress() {
+  uint8_t baseMac[6];
+  esp_err_t ret = esp_wifi_get_mac(WIFI_IF_STA, baseMac);
+  if (ret == ESP_OK) {
+    Serial.printf("%02x:%02x:%02x:%02x:%02x:%02x\n",
+                  baseMac[0], baseMac[1], baseMac[2],
+                  baseMac[3], baseMac[4], baseMac[5]);
+  }
+  else
+    Serial.println("Failed to read MAC address");
+}
+#endif //DEBUGGING
