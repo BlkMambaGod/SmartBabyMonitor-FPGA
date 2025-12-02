@@ -49,6 +49,10 @@ void loop() {
   delay(1000);
 #endif //DEBUGGING
 
+#ifdef DEBUG
+  uart_tx();
+#endif //DEBUG
+
 }
 
 // callback function that will be executed when data is received
@@ -67,6 +71,28 @@ void onDataRecv(const uint8_t* mac, const uint8_t* incomingData, int len) {
   Serial.print("AcZ: ");
   Serial.println(data.AcZ);
   Serial.println();
+}
+
+// UART transmitter comm
+void uart_tx() {
+  uint8_t frame[2 + sizeof(data) + 1]; // header + payload + checksum
+
+  // Header
+  frame[0] = 0xAA;
+  frame[1] = 0x55;
+
+  // Copiy of data to frame
+  memcpy(&frame[2], &data, sizeof(data));
+
+  // Computing checksum
+  uint8_t sum = 0;
+  for (int i = 0; i <sizeof(data); i++)
+    sum += frame[2 + i];
+
+  frame[2 + sizeof(data)] = sum;
+
+  // Sending frame
+  Serial2.write(frame, sizeof(frame));
 }
 
 
