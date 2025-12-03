@@ -7,8 +7,8 @@
 
 // Data received via esp-now
 struct package {
-  int32_t spo2;
-  int32_t heartRate;
+  uint32_t spo2;
+  uint32_t heartRate;
   int16_t AcX;
   int16_t AcY; 
   int16_t AcZ; 
@@ -17,13 +17,14 @@ struct package {
 package data;
 
 
-uint8_t msg = 0xFF;
+uint8_t msg = 0;
+unsigned long start;
 
 void setup() {
   // put your setup code here, to run once:
   // Initialize Serial Monitor
-  Serial.begin(115200);
-  // Serial2.begin(115200, SERIAL_8N1, RX, TX);
+  Serial.begin(19200);
+  Serial2.begin(115200, SERIAL_8N1, RX, TX);
 
   // Set device as a Wi-Fi Station
   WiFi.mode(WIFI_STA);
@@ -41,6 +42,7 @@ void setup() {
   // get recv packer info
   esp_now_register_recv_cb(esp_now_recv_cb_t(onDataRecv));
 
+  start = millis();
 }
 
 void loop() {
@@ -51,13 +53,11 @@ void loop() {
   readMacAddress();
   delay(1000);
 #endif //DEBUGGING
-
-#ifdef DEBUG
-  computing();
-  uart_tx();
-  delay(500);
-#endif //DEBUG
-
+  if (millis() - start > 500) {
+    computing();
+    Serial2.write(msg); // UART transmitter comm
+    start = millis();
+  }
 }
 
 // callback function that will be executed when data is received
@@ -78,21 +78,22 @@ void onDataRecv(const uint8_t* mac, const uint8_t* incomingData, int len) {
   Serial.println();
 }
 
-// UART transmitter comm
-void uart_tx() {
-  // Sending frame
-  Serial2.write(msg);
-}
-
 // Decision making
 void computing() {
-  if ((data.heartRate >= 60 && data.heartRate < 80) || (data.heartRate > 110 && data.heartRate <= 130) || (data.spo2 >= 50 && data.spo2 < 75))
-    msg = 0xf0;
+  if ((data.heartRate < 60) || (data.heartRate > 130) || (data.spo2 >= 75) || (data.spo2 <= 100))
+    msg = 2;
   else
-    if ((data.heartRate < 60) || (data.heartRate > 130) || (data.spo2 < 50))
-      msg = 0xff;
+    if ((data.heartRate < 60) || (data.heartRate > 130) || (data.spo2 < 75) || (data.spo2 > 100))
+      msg = 3;
     else
-      msg = 0x00;
+      if ((data.heartRate >= 60) || (data.heartRate <= 130) || (data.spo2 < 75))
+        msg = 1;
+      else
+        msg = 0;
+#ifdef DEBUG
+  Serial.print("msg = ");
+  Serial.println(msg);
+#endif // DEBUG
 }
 
 #ifdef DEBUGGING

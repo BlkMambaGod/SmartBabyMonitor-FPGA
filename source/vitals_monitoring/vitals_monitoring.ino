@@ -58,8 +58,8 @@ MAX30105 particleSensor;
 
 // Data to send
 struct package {
-  int32_t spo2;
-  int32_t heartRate;
+  uint32_t spo2;
+  uint32_t heartRate;
   int16_t AcX;
   int16_t AcY; 
   int16_t AcZ; 
@@ -145,22 +145,40 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  // if (millis() - start < DELAY / 2)
-  //   max_reader(ir, red);
+  // if (millis() - start < 300) {
+  //   max_reader();
+  //   displayText();
+  //   sending_package();
+  // }
   // else
-  //   if (millis() - start < DELAY)
+  //   if (millis() - start < 600) {
   //     mpu_reader(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);
-  
-#ifdef DEBUG
+  //     displayText();
+  //   }
+  //   else
+  //     if (millis() - start < 900) {
+  //       max_reader();
+  //       displayText();
+  //       sending_package();
+  //     }
+  //     else {
+  //       start = millis();
+  //       displayText();
+  //     }
   max_reader();
-  sending_package();
-  delay(100);
-  mpu_reader(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);
-  delay(100);
-  // display.startscrollright(0, 7);
+  mpu_reader(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);      
   displayText();
   sending_package();
-#endif // DEBUG
+// #ifdef DEBUG
+//   max_reader();
+//   sending_package();
+//   delay(100);
+//   mpu_reader(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);
+//   delay(100);
+//   // display.startscrollright(0, 7);
+//   displayText();
+//   sending_package();
+// #endif // DEBUG
 }
 
 // Callback when data is sent
