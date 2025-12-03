@@ -13,14 +13,17 @@ struct package {
   int16_t AcY; 
   int16_t AcZ; 
 };
+
 package data;
 
+
+uint8_t msg = 0xFF;
 
 void setup() {
   // put your setup code here, to run once:
   // Initialize Serial Monitor
   Serial.begin(115200);
-  Serial2.begin(115200, SERIAL_8N1, RX, TX);
+  // Serial2.begin(115200, SERIAL_8N1, RX, TX);
 
   // Set device as a Wi-Fi Station
   WiFi.mode(WIFI_STA);
@@ -50,7 +53,9 @@ void loop() {
 #endif //DEBUGGING
 
 #ifdef DEBUG
+  computing();
   uart_tx();
+  delay(500);
 #endif //DEBUG
 
 }
@@ -75,27 +80,20 @@ void onDataRecv(const uint8_t* mac, const uint8_t* incomingData, int len) {
 
 // UART transmitter comm
 void uart_tx() {
-  uint8_t frame[2 + sizeof(data) + 1]; // header + payload + checksum
-
-  // Header
-  frame[0] = 0xAA;
-  frame[1] = 0x55;
-
-  // Copiy of data to frame
-  memcpy(&frame[2], &data, sizeof(data));
-
-  // Computing checksum
-  uint8_t sum = 0;
-  for (int i = 0; i <sizeof(data); i++)
-    sum += frame[2 + i];
-
-  frame[2 + sizeof(data)] = sum;
-
   // Sending frame
-  Serial2.write(frame, sizeof(frame));
+  Serial2.write(msg);
 }
 
-
+// Decision making
+void computing() {
+  if ((data.heartRate >= 60 && data.heartRate < 80) || (data.heartRate > 110 && data.heartRate <= 130) || (data.spo2 >= 50 && data.spo2 < 75))
+    msg = 0xf0;
+  else
+    if ((data.heartRate < 60) || (data.heartRate > 130) || (data.spo2 < 50))
+      msg = 0xff;
+    else
+      msg = 0x00;
+}
 
 #ifdef DEBUGGING
 void readMacAddress() {
