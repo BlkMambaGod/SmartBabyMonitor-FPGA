@@ -14,7 +14,7 @@
 // #define DEBUGGING
 
 // Receiver MAC Address
-uint8_t broadcastAddress[] = {0xa0, 0xb7, 0x65, 0x26, 0xd7, 0x58};
+uint8_t broadcastAddress[] = {0xa0, 0xb7, 0x65, 0x25, 0x78, 0x9c};
 
 
 // Devices' addresses
@@ -29,18 +29,17 @@ const int SCREEN_HEIGHT = 64;
 int16_t AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ; // MPU-6050
 
 // Calibration offset for MPU-6050
-const int AcXcal = -950;
-const int AcYcal = -300;
-const int AcZcal = 0;
-const int tcal   = -1600;
-const int GyXcal = 480;
-const int GyYcal = 170;
-const int GyZcal = 210;
+static int AcXcal = 0;
+static int AcYcal = 0;
+static int AcZcal = 0;
+
+
 
 // Various variables and containers
 uint32_t ir_samples[100];
 uint32_t red_samples[100];
 int8_t spo2Valid, hrValid;
+const int SENSITIVITY = 16384; // LSB/g for ±2g FS (change if you set different FS)
 int i = 0;
 
 // Caluculated variables
@@ -113,6 +112,7 @@ void setup() {
   Wire.write(0x6B);
   Wire.write(0);
   Wire.endTransmission(true);
+  accel_calibrate(); // acceleration calibration
 
   // MAX-30102 initialization
   if(!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
@@ -120,8 +120,10 @@ void setup() {
     Serial.println("MAX-30102 not found. Check wiring!");
     WiFi.STA.begin();
 #endif //DEBUGGING
+    display.clearDisplay();
     display.setCursor(0, 16);
     display.print("NO DEVICE DETECTED");
+    display.display();
     display.startscrollright(0, 16);
     while(1);
   }
@@ -151,8 +153,10 @@ void loop() {
   
 #ifdef DEBUG
   max_reader();
-  // mpu_reader(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);
-  delay(1000);
+  sending_package();
+  delay(100);
+  mpu_reader(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);
+  delay(100);
   // display.startscrollright(0, 7);
   displayText();
   sending_package();
@@ -170,9 +174,9 @@ void sending_package() {
   // Setting values to send
   data.spo2 = spo2;
   data.heartRate = heartRate;
-  data.AcX = AcX + AcXcal;
-  data.AcY = AcY + AcYcal;
-  data.AcZ = AcZ + AcZcal;
+  data.AcX = AcX + AcXcal / SENSITIVITY;;
+  data.AcY = AcY + AcYcal / SENSITIVITY;;
+  data.AcZ = AcZ + AcZcal / SENSITIVITY;;
 
   // Send message via esp-now
   esp_err_t result = esp_now_send(broadcastAddress, (uint8_t*) &data, sizeof(data));
@@ -213,6 +217,7 @@ void mpu_reader(int16_t& AcX, int16_t& AcY, int16_t& AcZ, int16_t& Tmp,
   Wire.endTransmission(true); // ends transmission after a read
 
   // Printing values stored
+#ifdef DEBUGGING
   Serial.println(AcX);
   Serial.println(AcY);
   Serial.println(AcZ);
@@ -220,6 +225,7 @@ void mpu_reader(int16_t& AcX, int16_t& AcY, int16_t& AcZ, int16_t& Tmp,
   Serial.println(GyX);
   Serial.println(GyY);
   Serial.println(GyZ);
+#endif //DEBUGGING
 }
 
 // Function to read from MAX-30102
@@ -264,6 +270,19 @@ void max_reader() {
 #endif //DEBUGGING
 }
 
+// Accelerometer calibration value
+void accel_calibrate() {
+  long sx = 0, sy = 0, sz = 0;
+  for (int i = 0; i < 200; i++) {
+    mpu_reader(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);
+    sx += AcX;
+    sy += AcY;
+    sz += AcZ;
+  }
+  AcXcal = - (sx / 200);
+  AcYcal = - (sy / 200);
+  AcZcal = sz / 200;
+}
 
 void displayText() { // display of the vitals values
   displayReset();
