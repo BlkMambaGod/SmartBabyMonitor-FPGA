@@ -86,13 +86,16 @@ void uart_tx() {
 
 // Decision making
 void computing() {
-  if ((data.heartRate >= 60 && data.heartRate < 80) || (data.heartRate > 110 && data.heartRate <= 130) || (data.spo2 >= 50 && data.spo2 < 75))
+  if ((data.heartRate < 60) || (data.heartRate > 130) || (data.spo2 >= 75))
     msg = 0xf0;
   else
-    if ((data.heartRate < 60) || (data.heartRate > 130) || (data.spo2 < 50))
+    if ((data.heartRate < 60) || (data.heartRate > 130) || (data.spo2 < 75))
       msg = 0xff;
     else
-      msg = 0x00;
+      if ((data.heartRate >= 60) || (data.heartRate <= 130) || (data.spo2 >= 75))
+        msg = 0x0f;
+      else
+        msg = 0x00;
 }
 
 #ifdef DEBUGGING
