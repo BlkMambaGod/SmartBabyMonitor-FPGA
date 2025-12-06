@@ -144,41 +144,17 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  // if (millis() - start < 300) {
-  //   max_reader();
-  //   displayText();
-  //   sending_package();
-  // }
-  // else
-  //   if (millis() - start < 600) {
-  //     mpu_reader(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);
-  //     displayText();
-  //   }
-  //   else
-  //     if (millis() - start < 900) {
-  //       max_reader();
-  //       displayText();
-  //       sending_package();
-  //     }
-  //     else {
-  //       start = millis();
-  //       displayText();
-  //     }
-  max_reader();
-  mpu_reader(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);      
-  displayText();
-  sending_package();
-// #ifdef DEBUG
-//   max_reader();
-//   sending_package();
-//   delay(100);
-//   mpu_reader(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);
-//   delay(100);
-//   // display.startscrollright(0, 7);
-//   displayText();
-//   sending_package();
-// #endif // DEBUG
+  if (millis() - start < 500) {
+    max_reader();
+    displayText();
+  }
+  else
+    if (millis() - start < 1000) {
+      mpu_reader(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);      
+      sending_package();
+    }
+    else
+      start = millis();
 }
 
 // Callback when data is sent

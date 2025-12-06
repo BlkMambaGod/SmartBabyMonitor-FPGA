@@ -23,7 +23,7 @@ unsigned long start;
 void setup() {
   // put your setup code here, to run once:
   // Initialize Serial Monitor
-  Serial.begin(19200);
+  Serial.begin(115200);
   Serial2.begin(115200, SERIAL_8N1, RX, TX);
 
   // Set device as a Wi-Fi Station
@@ -80,20 +80,20 @@ void onDataRecv(const uint8_t* mac, const uint8_t* incomingData, int len) {
 
 // Decision making
 void computing() {
-  if ((data.heartRate < 60) || (data.heartRate > 130) || (data.spo2 >= 75) || (data.spo2 <= 100))
+  if ((data.heartRate < 60) || (data.heartRate > 130) && (data.spo2 >= 75) && (data.spo2 <= 100))
     msg = 2;
   else
-    if ((data.heartRate < 60) || (data.heartRate > 130) || (data.spo2 < 75) || (data.spo2 > 100))
+    if ((data.heartRate < 60) || (data.heartRate > 130) && (data.spo2 < 75) || (data.spo2 > 100))
       msg = 3;
     else
-      if ((data.heartRate >= 60) || (data.heartRate <= 130) || (data.spo2 < 75))
+      if ((data.heartRate >= 60) && (data.heartRate <= 130) && (data.spo2 < 75))
         msg = 1;
       else
         msg = 0;
-#ifdef DEBUG
+// #ifdef DEBUG
   Serial.print("msg = ");
   Serial.println(msg);
-#endif // DEBUG
+// #endif // DEBUG
 }
 
 #ifdef DEBUGGING
