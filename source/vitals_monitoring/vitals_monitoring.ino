@@ -144,17 +144,10 @@ void setup() {
 }
 
 void loop() {
-  if (millis() - start < 500) {
     max_reader();
     displayText();
-  }
-  else
-    if (millis() - start < 1000) {
-      mpu_reader(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);      
-      sending_package();
-    }
-    else
-      start = millis();
+    // mpu_reader(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);      
+    sending_package();
 }
 
 // Callback when data is sent
@@ -175,12 +168,11 @@ void sending_package() {
   // Send message via esp-now
   esp_err_t result = esp_now_send(broadcastAddress, (uint8_t*) &data, sizeof(data));
 
-#ifdef DEBUG
+
   if (result == ESP_OK)
     Serial.println("Sent with success");
   else
     Serial.println("Error sending the data");
-#endif //DEBUG
 }
 
 // Function to read from MPU-6050
